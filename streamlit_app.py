@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover - handled at runtime
     torch = None
     pipeline = None
 
-st.set_page_config(page_title="EcoAudit Aguascalientes", layout="wide")
+st.set_page_config(page_title="IAAGS Internal Readiness Organizer", layout="centered")
 st.markdown(
     """
     <style>
@@ -66,7 +66,11 @@ st.markdown(
     .stCheckbox label {
         color: #111111;
         font-size: 16px;
-        line-height: 1.4;
+        line-height: 1.5;
+        padding-top: 2px;
+    }
+    .stCheckbox {
+        padding: 6px 0;
     }
     .stTextArea>div>div>textarea {
         min-height: 110px;
@@ -75,6 +79,27 @@ st.markdown(
         padding-top: 6px;
         padding-bottom: 6px;
     }
+    @media (max-width: 768px) {
+        .stApp {
+            font-size: 15px;
+        }
+        .report-card {
+            padding: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .stButton>button {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            font-size: 15px;
+        }
+        .stCheckbox label {
+            font-size: 15px;
+        }
+        .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+            font-size: 15px;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -82,13 +107,63 @@ st.markdown(
 
 with st.sidebar:
     st.title("IAAGS.com")
-    st.info("Herramienta de apoyo ambiental")
+    st.info("Organizador interno de preparación ambiental")
     st.divider()
-    st.warning("Use este flujo para registrar observaciones de campo y generar una nota de apoyo para revisión interna.")
+    st.warning("Herramienta para estructurar un reporte interno profundo sobre riesgos operativos, requisitos regulatorios y preparación para criterios de proveedores.")
 
 st.title("IAAGS.com")
 st.write("Inteligencia Ambiental, Crecimiento Empresarial")
-st.caption("Para fines de entretenimiento y demostración. No es una inspección formal ni una evaluación oficial.")
+st.caption("Organizador interno para reducir riesgo de multas, cierres operativos, revisiones regulatorias y limitaciones de ingreso a cadenas de suministro. No es una auditoría formal ni una evaluación oficial.")
+
+st.markdown(
+    """
+    <div class="report-card">
+    <h3>Modo de organización interna</h3>
+    <p>Esta herramienta está diseñada para ayudar a una empresa a ordenar hallazgos generales de manejo de residuos y preparar un reporte interno más completo y accionable.</p>
+    <ul>
+      <li><strong>Objetivo:</strong> identificar riesgos generales de forma interna y preparar acciones antes de una revisión formal.</li>
+      <li><strong>Valor de negocio:</strong> mejora la preparación operativa, fortalece la trazabilidad, apoya la continuidad del negocio y puede facilitar el cumplimiento de requisitos de proveedores y clientes.</li>
+      <li><strong>Qué ofrece:</strong> una vista general de brechas y una base para un análisis más profundo sobre PROFEPA, SEMARNAT, autoridades locales y requisitos de proveedor.</li>
+      <li><strong>Qué no es:</strong> una auditoría formal ni una evaluación legal, gubernamental o técnica.</li>
+    </ul>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+with st.expander("Instrucciones para revisores", expanded=True):
+    st.write(
+        """
+        - Pruebe el flujo completo desde la carga de evidencia hasta la generación del informe.
+        - Revise si las preguntas son claras y si las observaciones tienen sentido.
+        - Compare el riesgo asignado con lo que ve en la foto o en los datos.
+        - Envíe comentarios sobre claridad, valor práctico y mejoras.
+        """
+    )
+
+st.subheader("📝 Feedback de revisión")
+st.caption("Use este espacio para dejar comentarios, observaciones o sugerencias de mejora.")
+
+with st.form("review_feedback_form"):
+    name = st.text_input("Nombre o alias")
+    role = st.text_input("Rol o industria")
+    feedback = st.text_area("Comentarios")
+    submitted_feedback = st.form_submit_button("Enviar comentarios")
+
+if submitted_feedback:
+    reports_dir = Path(__file__).resolve().parent / "data"
+    reports_dir.mkdir(exist_ok=True)
+    feedback_file = reports_dir / "review_feedback.csv"
+
+    if feedback_file.exists():
+        feedback_df = pd.read_csv(feedback_file)
+    else:
+        feedback_df = pd.DataFrame(columns=["name", "role", "feedback"])
+
+    new_feedback = pd.DataFrame([{"name": name, "role": role, "feedback": feedback}])
+    combined_feedback = pd.concat([feedback_df, new_feedback], ignore_index=True)
+    combined_feedback.to_csv(feedback_file, index=False)
+    st.success("Gracias. Su comentario quedó registrado para revisión interna.")
 
 
 def get_risk_level(score: int) -> str:
@@ -97,6 +172,14 @@ def get_risk_level(score: int) -> str:
     if score >= 35:
         return "AMARILLO / YELLOW"
     return "VERDE / GREEN"
+
+
+def get_supplier_readiness(score: int) -> str:
+    if score >= 70:
+        return "Se requiere reforzar de inmediato la preparación documental y operativa antes de avanzar hacia la elegibilidad como proveedor de una planta Tier 1 o Tier 2."
+    if score >= 35:
+        return "Se observa una base de control, pero aún faltan controles de trazabilidad, documentación y respuesta operativa para fortalecer la posición como proveedor potencial."
+    return "Se observan condiciones básicas que pueden respaldar una preparación más sólida, aunque conviene consolidar procesos de trazabilidad y documentación."
 
 
 def get_violations(checks: dict) -> list[str]:
@@ -218,67 +301,64 @@ def get_suggestions(checks: dict) -> list[str]:
     return suggestions
 
 
-col1, col2 = st.columns([1, 1])
+st.subheader("📸 Evidencia fotográfica")
+st.caption("Suba una foto clara del contenedor, etiquetas, derrames o manifiesto.")
+img_file = st.file_uploader("Suba una foto del contenedor, etiquetas o manifiesto", type=["jpg", "jpeg", "png"])
+if img_file:
+    img = Image.open(img_file)
+    st.image(img, caption="Evidencia cargada", use_container_width=True)
 
-with col1:
-    st.subheader("📸 Evidencia fotográfica")
-    st.caption("Suba una foto clara del contenedor, etiquetas, derrames o manifiesto.")
-    img_file = st.file_uploader("Suba una foto del contenedor, etiquetas o manifiesto", type=["jpg", "jpeg", "png"])
-    if img_file:
-        img = Image.open(img_file)
-        st.image(img, caption="Evidencia cargada", use_container_width=True)
+if img_file and pipeline is not None:
+    st.subheader("🤖 Análisis con IA")
+    run_ai = st.checkbox("Intentar análisis automático de la imagen", value=False)
+    if run_ai:
+        with st.spinner("Analizando la imagen con un modelo local..."):
+            try:
+                vision_pipeline = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning")
+                result = vision_pipeline(img)
+                ai_text = result[0]["generated_text"] if isinstance(result, list) and result else str(result)
+            except Exception as exc:
+                ai_text = f"No fue posible completar el análisis automático: {exc}"
+        st.info(ai_text)
 
-    if img_file and pipeline is not None:
-        st.subheader("🤖 Análisis con IA")
-        run_ai = st.checkbox("Intentar análisis automático de la imagen", value=False)
-        if run_ai:
-            with st.spinner("Analizando la imagen con un modelo local..."):
-                try:
-                    vision_pipeline = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning")
-                    result = vision_pipeline(img)
-                    ai_text = result[0]["generated_text"] if isinstance(result, list) and result else str(result)
-                except Exception as exc:
-                    ai_text = f"No fue posible completar el análisis automático: {exc}"
-            st.info(ai_text)
+st.subheader("🧾 Lista de verificación")
+st.caption("Registre solo lo que se observa en el contexto interno. Este flujo organiza hallazgos generales para preparar un acompañamiento detallado posterior.")
+with st.form("inspection_form"):
+    st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 10px 0;'><strong>1. Almacenamiento y manejo</strong><br>Inspección física del área, contenedores y condiciones de manejo.</div>", unsafe_allow_html=True)
+    containment = st.checkbox("Hay contención secundaria o charola de derrames")
+    spills = st.checkbox("Se observan derrames, manchas o fugas")
+    roof = st.checkbox("Hay almacenamiento cubierto o bajo techo")
+    shelter = st.checkbox("Hay protección contra intemperie")
+    segregation = st.checkbox("Se observa segregación de residuos")
+    inventory = st.checkbox("Hay inventario o control de residuos")
 
-    st.subheader("🧾 Lista de verificación")
-    st.caption("Marque solo lo que sí se observa. Si algo no está claro, deje la casilla sin marcar.")
-    with st.form("inspection_form"):
-        st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 8px 0;'><strong>1. Almacenamiento y manejo</strong><br>Inspección física del área, contenedores y condiciones de manejo.</div>", unsafe_allow_html=True)
-        containment = st.checkbox("Hay contención secundaria o charola de derrames")
-        spills = st.checkbox("Se observan derrames, manchas o fugas")
-        roof = st.checkbox("Hay almacenamiento cubierto o bajo techo")
-        shelter = st.checkbox("Hay protección contra intemperie")
-        segregation = st.checkbox("Se observa segregación de residuos")
-        inventory = st.checkbox("Hay inventario o control de residuos")
+    st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 10px 0;'><strong>2. Documentación y disposición</strong><br>Revisión de etiquetas, códigos, fechas, manifiestos y evidencia documental.</div>", unsafe_allow_html=True)
+    labels = st.checkbox("Las etiquetas son visibles y legibles")
+    cretib = st.checkbox("El código CRETIB es visible")
+    date = st.checkbox("La fecha de generación es visible")
+    docs = st.checkbox("Hay evidencia de manifiesto, acuse o permiso")
+    nra = st.checkbox("Se observa número de registro o documento")
+    stamp = st.checkbox("Se observa sello o acuse oficial visible")
 
-        st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 8px 0;'><strong>2. Documentación y disposición</strong><br>Revisión de etiquetas, códigos, fechas, manifiestos y evidencia documental.</div>", unsafe_allow_html=True)
-        labels = st.checkbox("Las etiquetas son visibles y legibles")
-        cretib = st.checkbox("El código CRETIB es visible")
-        date = st.checkbox("La fecha de generación es visible")
-        docs = st.checkbox("Hay evidencia de manifiesto, acuse o permiso")
-        nra = st.checkbox("Se observa número de registro o documento")
-        stamp = st.checkbox("Se observa sello o acuse oficial visible")
+    st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 10px 0;'><strong>3. Transporte y destino final</strong><br>Control del traslado, ruta, contenedor y destino del residuo.</div>", unsafe_allow_html=True)
+    container = st.checkbox("El contenedor se encuentra en buen estado para traslado")
+    transfer = st.checkbox("Hay control de transferencia o cadena de custodia")
+    destination = st.checkbox("Hay evidencia de destino final o ruta de disposición")
+    transport_control = st.checkbox("Hay control claro del transporte o ruta")
+    disposal_evidence = st.checkbox("Hay evidencia de disposición final o seguimiento")
 
-        st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 8px 0;'><strong>3. Transporte y destino final</strong><br>Control del traslado, ruta, contenedor y destino del residuo.</div>", unsafe_allow_html=True)
-        container = st.checkbox("El contenedor se encuentra en buen estado para traslado")
-        transfer = st.checkbox("Hay control de transferencia o cadena de custodia")
-        destination = st.checkbox("Hay evidencia de destino final o ruta de disposición")
-        transport_control = st.checkbox("Hay control claro del transporte o ruta")
-        disposal_evidence = st.checkbox("Hay evidencia de disposición final o seguimiento")
+    st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 10px 0;'><strong>4. Riesgo y respuesta operativa</strong><br>Identificación del peligro y preparación básica para derrames o incidentes.</div>", unsafe_allow_html=True)
+    hazard_id = st.checkbox("Se identifica claramente el tipo de residuo o riesgo")
+    spill_kit = st.checkbox("Hay equipo o procedimiento para respuesta ante derrames")
+    closed_container = st.checkbox("El contenedor está cerrado o protegido adecuadamente")
 
-        st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 8px 0;'><strong>4. Riesgo y respuesta operativa</strong><br>Identificación del peligro y preparación básica para derrames o incidentes.</div>", unsafe_allow_html=True)
-        hazard_id = st.checkbox("Se identifica claramente el tipo de residuo o riesgo")
-        spill_kit = st.checkbox("Hay equipo o procedimiento para respuesta ante derrames")
-        closed_container = st.checkbox("El contenedor está cerrado o protegido adecuadamente")
+    st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 10px 0;'><strong>5. Referencias generales</strong><br>Se consideran referencias generales para manejo ambiental, almacenamiento, etiquetado, transporte, trazabilidad y disposición final.</div>", unsafe_allow_html=True)
+    st.caption("Incluye marcos federales y estatales comúnmente asociados a residuos y materiales peligrosos.")
 
-        st.markdown("<div style='background:#fff3f4;padding:12px 14px;border-radius:10px;border:1px solid #e7c9ce;margin:10px 0 8px 0;'><strong>5. Referencias generales</strong><br>Se consideran referencias generales para manejo ambiental, almacenamiento, etiquetado, transporte, trazabilidad y disposición final.</div>", unsafe_allow_html=True)
-        st.caption("Incluye marcos federales y estatales comúnmente asociados a residuos y materiales peligrosos.")
+    notes = st.text_area("Observaciones / Notes")
+    submitted = st.form_submit_button("Generar informe")
 
-        notes = st.text_area("Observaciones / Notes")
-        submitted = st.form_submit_button("Generar informe")
-
-    if submitted:
+if submitted:
         checks = {
             "containment": containment,
             "spills": spills,
@@ -349,11 +429,25 @@ with col1:
             score += 6
 
         risk_level = get_risk_level(score)
+        supplier_readiness = get_supplier_readiness(score)
+
+        critical_gaps = [item for item in violations[:6]]
+        executive_summary = (
+            f"Se identificó un nivel general de {risk_level.lower()} en la preparación interna del sitio, con un puntaje de riesgo de {score}/100. "
+            "El resultado sugiere la necesidad de consolidar controles operativos, documentación y trazabilidad para reducir exposición ante revisiones regulatorias, requerimientos internos y criterios de selección de proveedores."
+        )
 
         report_text = "\n".join(
             [
+                "**Resumen ejecutivo**",
+                executive_summary,
+                "",
                 f"**Estado de cumplimiento:** {risk_level}",
                 f"**Puntaje de riesgo:** {score}/100",
+                f"**Preparación para proveedor Tier 1/2:** {supplier_readiness}",
+                "",
+                "**Gaps críticos prioritarios:**",
+                *([f"- {item}" for item in critical_gaps] if critical_gaps else ["- No se identificaron brechas críticas inmediatas"]),
                 "",
                 "**Problemas observados:**",
                 *([f"- {item}" for item in violations] if violations else ["- Ninguno detectado"]),
@@ -364,20 +458,24 @@ with col1:
                 "**Acciones correctivas sugeridas:**",
                 *([f"- {item}" for item in suggestions] if suggestions else ["- No se requiere acción inmediata"]),
                 "",
+                "**Preparación para convertirse en proveedor de una planta Tier 1/2 en Aguascalientes:**",
+                "- Los temas de almacenamiento, etiquetado, trazabilidad, respuesta operativa, documentación y disposición pueden influir en la elegibilidad de un proveedor y en la confianza de clientes y plantas de cadena de suministro.",
+                "- Un diagnóstico interno más profundo puede ayudar a cerrar brechas antes de una revisión formal, una solicitud de proveedor, una evaluación de continuidad operativa o una revisión por parte de autoridades como PROFEPA, SEMARNAT o autoridades locales.",
+                "",
                 f"**Observaciones:** {notes or 'No se proporcionaron observaciones adicionales.'}",
             ]
         )
 
-        with col2:
-            st.subheader("🔍 Informe de inspección")
-            st.caption("Resultado generado a partir de la información registrada y la evidencia cargada.")
-            st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.subheader("🔍 Informe de inspección")
+        st.caption("Resultado generado a partir de la información registrada y la evidencia cargada.")
+        st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
 
-            reports_dir = Path(__file__).resolve().parent / "data"
-            reports_dir.mkdir(exist_ok=True)
-            reports_file = reports_dir / "inspection_reports.csv"
+        reports_dir = Path(__file__).resolve().parent / "data"
+        reports_dir.mkdir(exist_ok=True)
+        reports_file = reports_dir / "inspection_reports.csv"
 
-            record = {
+        record = {
                 "risk_level": risk_level,
                 "risk_score": score,
                 "containment": containment,
@@ -406,22 +504,22 @@ with col1:
                 "notes": notes,
             }
 
-            if reports_file.exists():
-                existing = pd.read_csv(reports_file)
-            else:
-                existing = pd.DataFrame()
+        if reports_file.exists():
+            existing = pd.read_csv(reports_file)
+        else:
+            existing = pd.DataFrame()
 
-            new_df = pd.DataFrame([record])
-            combined = pd.concat([existing, new_df], ignore_index=True)
-            combined.to_csv(reports_file, index=False)
+        new_df = pd.DataFrame([record])
+        combined = pd.concat([existing, new_df], ignore_index=True)
+        combined.to_csv(reports_file, index=False)
 
-            st.success(f"Guardado en {reports_file}")
-            st.download_button(
-                label="Descargar informe como CSV (listo para Google Sheets)",
-                data=combined.tail(1).to_csv(index=False).encode("utf-8"),
-                file_name="inspection_report.csv",
-                mime="text/csv",
-            )
+        st.success(f"Guardado en {reports_file}")
+        st.download_button(
+            label="Descargar informe como CSV (listo para Google Sheets)",
+            data=combined.tail(1).to_csv(index=False).encode("utf-8"),
+            file_name="inspection_report.csv",
+            mime="text/csv",
+        )
 
-            st.markdown("---")
-            st.caption("Aviso: esta herramienta es una nota de apoyo para autoevaluación y no sustituye una inspección legal, oficial, técnica o regulatoria. No representa una evaluación formal ni una recomendación de autoridad alguna. Las sugerencias son de carácter general y deben verificarse con personal ambiental competente y con la normativa aplicable a cada caso.")
+        st.markdown("---")
+        st.caption("Aviso: esta herramienta funciona como un organizador interno de preparación ambiental y no sustituye una inspección legal, oficial, técnica o regulatoria. No representa una evaluación formal ni una recomendación de autoridad alguna. Las sugerencias son de carácter general y deben verificarse con personal ambiental competente y con la normativa aplicable a cada caso, incluyendo requisitos aplicables de PROFEPA, SEMARNAT, autoridades locales y criterios de evaluación de proveedores. El objetivo es fortalecer la preparación operativa y la continuidad del negocio de manera responsable y práctica.")
