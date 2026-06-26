@@ -1,4 +1,6 @@
 .streamlit/secrets.toml
+.gemini_key
+data/inspection_reports.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
