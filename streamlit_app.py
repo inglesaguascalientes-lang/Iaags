@@ -437,17 +437,32 @@ if submitted:
             "El resultado sugiere la necesidad de consolidar controles operativos, documentación y trazabilidad para reducir exposición ante revisiones regulatorias, requerimientos internos y criterios de selección de proveedores."
         )
 
+        summary_bullets = [
+            f"1. Estado general: {risk_level} con puntaje de riesgo {score}/100.",
+            f"2. Evaluación de proveedor: {supplier_readiness}",
+            f"3. Brechas críticas: {', '.join(critical_gaps) if critical_gaps else 'No se detectaron brechas críticas inmediatas.'}",
+            f"4. Almacenamiento y contención: {'se observa control adecuado' if containment and not spills and roof and shelter else 'requiere mejora en contención, derrames o protección'}.",
+            f"5. Documentación y trazabilidad: {'se observa documentación básica' if labels and cretib and date and docs and nra and stamp else 'faltan etiquetas, fechas, códigos o evidencias oficiales'}.",
+            f"6. Transporte y destino final: {'se cuenta con evidencia de control de traslado' if container and transfer and destination and transport_control and disposal_evidence else 'se requiere mayor control de transporte, ruta o disposición final'}.",
+            f"7. Respuesta operativa: {'se observa preparación básica' if hazard_id and spill_kit and closed_container else 'se recomienda fortalecer respuesta ante derrames e identificación del riesgo'}.",
+            f"8. Beneficio esperado: mejorar la preparación para auditorías internas, requisitos de cliente/proveedor y continuidad operativa.",
+            f"9. Recomendación prioritaria: {suggestions[0] if suggestions else 'Mantener vigilancia operativa y documentar mejoras continuas.'}",
+            f"10. Observaciones: {notes or 'No se proporcionaron observaciones adicionales.'}",
+        ]
+
         report_text = "\n".join(
             [
-                "**Resumen ejecutivo**",
+                "**Resumen ejecutivo profesional**",
                 executive_summary,
                 "",
-                f"**Estado de cumplimiento:** {risk_level}",
-                f"**Puntaje de riesgo:** {score}/100",
-                f"**Preparación para proveedor Tier 1/2:** {supplier_readiness}",
-                "",
-                "**Gaps críticos prioritarios:**",
-                *([f"- {item}" for item in critical_gaps] if critical_gaps else ["- No se identificaron brechas críticas inmediatas"]),
+                *summary_bullets,
+            ]
+        )
+
+        detailed_report_text = "\n".join(
+            [
+                "**Detalle técnico completo**",
+                executive_summary,
                 "",
                 "**Problemas observados:**",
                 *([f"- {item}" for item in violations] if violations else ["- Ninguno detectado"]),
@@ -458,18 +473,17 @@ if submitted:
                 "**Acciones correctivas sugeridas:**",
                 *([f"- {item}" for item in suggestions] if suggestions else ["- No se requiere acción inmediata"]),
                 "",
-                "**Preparación para convertirse en proveedor de una planta Tier 1/2 en Aguascalientes:**",
-                "- Los temas de almacenamiento, etiquetado, trazabilidad, respuesta operativa, documentación y disposición pueden influir en la elegibilidad de un proveedor y en la confianza de clientes y plantas de cadena de suministro.",
-                "- Un diagnóstico interno más profundo puede ayudar a cerrar brechas antes de una revisión formal, una solicitud de proveedor, una evaluación de continuidad operativa o una revisión por parte de autoridades como PROFEPA, SEMARNAT o autoridades locales.",
-                "",
-                f"**Observaciones:** {notes or 'No se proporcionaron observaciones adicionales.'}",
+                f"**Observaciones adicionales:** {notes or 'No se proporcionaron observaciones adicionales.'}",
             ]
         )
 
         st.markdown("---")
         st.subheader("🔍 Informe de inspección")
-        st.caption("Resultado generado a partir de la información registrada y la evidencia cargada.")
+        st.caption("Resumen ejecutivo profesional en la vista principal y detalle técnico adicional para revisión interna.")
         st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
+
+        with st.expander("Detalle técnico completo para revisión interna", expanded=False):
+            st.markdown(detailed_report_text)
 
         reports_dir = Path(__file__).resolve().parent / "data"
         reports_dir.mkdir(exist_ok=True)
@@ -478,6 +492,9 @@ if submitted:
         record = {
                 "risk_level": risk_level,
                 "risk_score": score,
+                "supplier_readiness": supplier_readiness,
+                "executive_summary": executive_summary,
+                "summary_bullets": " | ".join(summary_bullets),
                 "containment": containment,
                 "spills": spills,
                 "labels": labels,
@@ -501,6 +518,7 @@ if submitted:
                 "violations": "; ".join(violations),
                 "laws": "; ".join(laws),
                 "suggestions": "; ".join(suggestions),
+                "detailed_report_text": detailed_report_text,
                 "notes": notes,
             }
 
